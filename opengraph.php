@@ -5,7 +5,7 @@
  Description: Adds Open Graph metadata to your pages
  Author: Will Norris
  Author URI: http://willnorris.com/
- Version: 1.3
+ Version: 1.4
  License: Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0.html)
  Text Domain: opengraph
  */
@@ -110,15 +110,36 @@ function opengraph_default_type( $type ) {
 
 
 /**
- * Default image property, using the post-thumbnail.
+ * Default image property, using the post-thumbnail and any attached images.
  */
 function opengraph_default_image( $image ) {
-  global $post;
-  if ( function_exists('has_post_thumbnail') ) {
-    if ( is_singular() && empty($image) && has_post_thumbnail($post->ID) ) {
-      $thumbnail = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'post-thumbnail');
+  if ( empty($image) ) {
+    global $post;
+    $image_ids = array();
+
+    // list post thumbnail first if this post has one
+    if ( function_exists('has_post_thumbnail') ) {
+      if ( is_singular() && has_post_thumbnail($post->ID) ) {
+        $image_ids[] = get_post_thumbnail_id( $post->ID );
+      }
+    }
+
+    // then list any image attachments
+    $attachments = get_children( array('post_parent' => $post->ID, 'post_status' => 'inherit',
+      'post_type' => 'attachment', 'post_mime_type' => 'image', 'order' => 'ASC',
+      'orderby' => 'menu_order ID') );
+    foreach($attachments as $attachment) {
+      if ( !in_array($attachment->ID, $image_ids) ) {
+        $image_ids[] = $attachment->ID;
+      }
+    }
+
+    // get URLs for each image
+    $image = array();
+    foreach($image_ids as $id) {
+      $thumbnail = wp_get_attachment_image_src( $id, 'medium');
       if ($thumbnail) {
-        $image = $thumbnail[0];
+        $image[] = $thumbnail[0];
       }
     }
   }
@@ -148,15 +169,19 @@ function opengraph_default_sitename( $name ) {
  * Default description property, using the bloginfo description.
  */
 function opengraph_default_description( $description ) {
-  if ( is_singular() && empty($description) ) {
-    if ( has_excerpt() ) {
-      $description = get_the_excerpt();
+  if ( empty($description) ) {
+    if ( is_singular() ) {
+      if ( has_excerpt() ) {
+        $description = strip_tags(get_the_excerpt());
+      } else {
+        global $post;
+        // fallback to first 50 words of post contet, minus tags and shortcodes
+        $description = strip_tags(strip_shortcodes($post->post_content));
+        $description = wp_trim_words($description, 50, '...' );
+      }
     } else {
-      global $post;
-      $description = wp_trim_words( strip_shortcodes($post->post_content), 25, '...' );
+      $description = get_bloginfo('description');
     }
-  } elseif ( empty($description) ) {
-    $description = get_bloginfo('description');
   }
   return $description;
 }
