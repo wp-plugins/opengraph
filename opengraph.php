@@ -5,7 +5,7 @@
  Description: Adds Open Graph metadata to your pages
  Author: Will Norris
  Author URI: http://willnorris.com/
- Version: 1.5
+ Version: 1.5.1
  License: Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0.html)
  Text Domain: opengraph
  */
@@ -13,7 +13,8 @@
 
 // If you have the opengraph plugin running alongside jetpack, we assume you'd
 // rather use our opengraph support, so disable jetpack's opengraph functionality.
-add_filter('jetpack_enable_opengraph', '__return_false', 99);
+add_filter('jetpack_enable_opengraph', '__return_false');
+add_filter('jetpack_enable_open_graph', '__return_false');
 
 
 /**
